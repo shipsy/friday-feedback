@@ -9,7 +9,7 @@
 
 ## 1. Purpose
 
-A lightweight web app that collects a customer CSAT rating (+ optional comment) for a specific support ticket and writes it to a Google Sheet. The customer reaches it via a link embedded in the resolution email, e.g. `friday.vercel.app/TKT-93849`. Tapping a star opens the page with the rating pre-selected; the customer submits and the response lands in a sheet keyed to the ticket number.
+A lightweight web app that collects a customer yes/no rating — "was the AI's response helpful?" — (+ optional comment) for a specific support ticket and writes it to a Google Sheet. The customer reaches it via a link embedded in the resolution email, e.g. `friday.vercel.app/TKT-93849`. Tapping Yes or No opens the page with that answer pre-selected; the customer submits and the response lands in a sheet keyed to the ticket number.
 
 ---
 
@@ -17,7 +17,7 @@ A lightweight web app that collects a customer CSAT rating (+ optional comment) 
 
 **Goals**
 - One shareable link per ticket, of the form `friday.vercel.app/<ticket>`.
-- Feedback page: 1–5 star rating (pre-filled from the link) + optional comment.
+- Feedback page: yes/no rating (pre-filled from the link) + optional comment.
 - On submit, append/upsert the response to a Google Sheet.
 - Deployable on Vercel with minimal config.
 
@@ -33,21 +33,21 @@ A lightweight web app that collects a customer CSAT rating (+ optional comment) 
 
 ```mermaid
 flowchart TD
-    A["Resolution email<br/>star links → friday.vercel.app/&lt;ticket&gt;?r=N"] -->|customer taps a star| B
+    A["Resolution email<br/>yes/no links → friday.vercel.app/&lt;ticket&gt;?r=yes|no"] -->|customer taps yes/no| B
     subgraph VERCEL["Vercel — Next.js App Router"]
         B["Dynamic route /[ticket]<br/>reads ticket + ?r= prefill"]
         B --> D["Feedback page<br/>rating prefilled + optional comment"]
         D -->|submit POST| F["/api/feedback<br/>Route Handler (serverless)"]
-        F --> G{"Validate:<br/>rating 1–5 • honeypot empty<br/>(optional) rate limit"}
+        F --> G{"Validate:<br/>rating yes/no • honeypot empty<br/>(optional) rate limit"}
         G -->|reject| E["400 / 429 error"]
         G -->|ok| H["Google Sheets append/upsert<br/>via service-account JWT"]
     end
     H -->|Sheets API| S[("Google Sheet<br/>ticket · rating · comment · ts")]
-    S --> R["Ops: pivot / Looker Studio<br/>CSAT %, avg rating by customer"]
+    S --> R["Ops: pivot / Looker Studio<br/>helpful % (yes) by customer"]
     ENV["Vercel env vars<br/>SA_KEY • SHEET_ID • SHEET_TAB"] --- F
 ```
 
-Flow: customer clicks a star link in the resolution email → dynamic route renders the feedback page with the rating pre-filled → customer submits → serverless API validates and writes to Google Sheets → ops reads the sheet.
+Flow: customer clicks a yes/no link in the resolution email → dynamic route renders the feedback page with the answer pre-filled → customer submits → serverless API validates and writes to Google Sheets → ops reads the sheet.
 
 ---
 
@@ -68,7 +68,7 @@ Flow: customer clicks a star link in the resolution email → dynamic route rend
 ## 5. URL & routing design
 
 - **Route:** `app/[ticket]/page.jsx` → matches `friday.vercel.app/TKT-93849`.
-- **Rating prefill:** optional query param `?r=<1-5>`. Star links in the email point to `friday.vercel.app/<ticket>?r=4`. No signing — the param is a convenience only; the real value is captured by what the customer submits.
+- **Rating prefill:** optional query param `?r=yes` or `?r=no` (case-insensitive). Yes/No links in the email point to `friday.vercel.app/<ticket>?r=yes`. No signing — the param is a convenience only; the real value is captured by what the customer submits.
 - **Ticket validation:** accept a simple pattern (e.g. `^[A-Za-z0-9\-]{3,40}$`). Reject anything else with a friendly "invalid link" state. (No lookup against DevRev in this version.)
 - Root path `/` renders a minimal placeholder ("This link opens from your support email"). No public index of tickets.
 
@@ -77,11 +77,11 @@ Flow: customer clicks a star link in the resolution email → dynamic route rend
 ## 6. Feedback page behavior (`/[ticket]`)
 
 - Read `ticket` from the route param; read `r` from the query string.
-- Render: heading, ticket number (display only), a 5-star selector (pre-filled from `r`), an optional comment textarea, a submit button.
-- Client-side guardrails: rating required (1–5); comment optional, max ~1000 chars.
+- Render: heading, ticket number (display only), a yes/no selector (pre-filled from `r`), an optional comment textarea, a submit button.
+- Client-side guardrails: rating required (`yes` or `no`); comment optional, max ~1000 chars.
 - Include a hidden honeypot input named `website` (must stay empty; bots fill it).
 - On submit → `POST /api/feedback`. Show a success ("Thanks — your rating for `<ticket>` is recorded") or error state inline.
-- Accessible: keyboard-operable stars (arrow keys + enter), visible focus, `prefers-reduced-motion` respected, works down to ~360px mobile.
+- Accessible: keyboard-operable yes/no radiogroup (arrow keys + enter), visible focus, `prefers-reduced-motion` respected, works down to ~360px mobile.
 
 ---
 
@@ -91,7 +91,7 @@ Flow: customer clicks a star link in the resolution email → dynamic route rend
 ```json
 {
   "ticket": "TKT-93849",
-  "rating": 4,
+  "rating": "yes",               // "yes" or "no" (case-insensitive)
   "comment": "Quick resolution, thanks",
   "customer": "Flipkart",        // optional, may be passed via ?c= on the link
   "website": ""                  // honeypot — must be empty
@@ -100,7 +100,7 @@ Flow: customer clicks a star link in the resolution email → dynamic route rend
 
 **Server-side validation**
 - `ticket` matches the allowed pattern.
-- `rating` is an integer 1–5.
+- `rating` is `yes` or `no` (trimmed, lower-cased; anything else rejected).
 - `comment` length ≤ 1000; strip control characters.
 - `website` is empty → else silently return 200 without writing (bot).
 - (Optional) rate-limit by IP.
@@ -121,7 +121,7 @@ Flow: customer clicks a star link in the resolution email → dynamic route rend
 
 | ticket | rating | comment | submitted_at | customer | user_agent |
 |---|---|---|---|---|---|
-| TKT-93849 | 4 | Quick resolution, thanks | 2026-07-02T10:14:00Z | Flipkart | Mozilla/5.0… |
+| TKT-93849 | yes | Quick resolution, thanks | 2026-07-02T10:14:00Z | Flipkart | Mozilla/5.0… |
 
 **Write strategy**
 - **MVP:** always `spreadsheets.values.append` (simplest; multiple rows per ticket allowed, latest wins during analysis).
@@ -223,15 +223,15 @@ vercel deploy --prod
 - **Signed tokens** (`/f/<token>`, HMAC) to stop spoofing and hide ticket IDs.
 - **DevRev write-back:** post the CSAT onto the ticket as a custom field or timeline note.
 - **DevRev ticket validation** before showing the form (confirm the ticket exists / is closed).
-- **Looker Studio** dashboard on the sheet: CSAT %, avg rating by customer — feeds the Flipkart-first resolution-rate work.
-- Email-builder helper to generate the star links per ticket.
+- **Looker Studio** dashboard on the sheet: helpful % (share of `yes`) by customer — feeds the Flipkart-first resolution-rate work.
+- Email-builder helper to generate the yes/no links per ticket.
 
 ---
 
 ## 15. Acceptance criteria (Claude Code — verify before handoff)
 
 - [ ] `friday.vercel.app/TKT-93849` renders the feedback page.
-- [ ] `?r=4` pre-selects 4 stars on load.
+- [ ] `?r=yes` pre-selects Yes on load (`?r=no` pre-selects No).
 - [ ] Submitting a rating (with/without comment) writes a correct row to the sheet.
 - [ ] Re-submitting the same ticket updates its row (if upsert implemented).
 - [ ] Missing/invalid rating is blocked client- and server-side.

@@ -1,14 +1,15 @@
 # Friday Ticket Feedback
 
-A lightweight Next.js (App Router, JavaScript) app that collects a customer CSAT
-rating (1–5 stars) + optional comment for a support ticket and writes it to a
-Google Sheet. Customers reach it via a per-ticket link in the resolution email:
+A lightweight Next.js (App Router, JavaScript) app that collects a customer
+yes/no rating ("was the AI's response helpful?") + optional comment for a
+support ticket and writes it to a Google Sheet. Customers reach it via a
+per-ticket link in the resolution email:
 
 ```
-https://friday.vercel.app/TKT-93849?r=4
+https://friday.vercel.app/TKT-93849?r=yes
 ```
 
-Tapping a star in the email opens the page with that rating pre-selected; the
+Tapping Yes/No in the email opens the page with that answer pre-selected; the
 customer submits and the response is upserted into a sheet keyed by ticket.
 
 Design doc: [`docs/sdd/friday_feedback_hld.md`](docs/sdd/friday_feedback_hld.md).
@@ -18,9 +19,9 @@ Design doc: [`docs/sdd/friday_feedback_hld.md`](docs/sdd/friday_feedback_hld.md)
 ## How it works
 
 - **Route** `app/[ticket]/page.jsx` matches `/<ticket>` (e.g. `/TKT-93849`).
-  `?r=<1-5>` pre-selects the rating; `?c=<name>` optionally passes a customer
-  label. Neither is signed — they're convenience only; the submitted rating is
-  what counts.
+  `?r=yes` / `?r=no` pre-selects the answer; `?c=<name>` optionally passes a
+  customer label. Neither is signed — they're convenience only; the submitted
+  rating is what counts.
 - The page validates the ticket against `^[A-Za-z0-9-]{3,40}$` and shows an
   "invalid link" state otherwise.
 - Submit → `POST /api/feedback` → server validation → **upsert** into the sheet
@@ -68,7 +69,7 @@ Variables**.
 ```bash
 npm install
 npm run dev
-# visit http://localhost:3000/TKT-TEST?r=4
+# visit http://localhost:3000/TKT-TEST?r=yes
 ```
 
 ## Deploy (Vercel)
@@ -97,7 +98,7 @@ friday-feedback/
 │  ├─ robots.js               # robots.txt: disallow all
 │  ├─ [ticket]/
 │  │  ├─ page.jsx             # server shell: validate + prefill
-│  │  └─ FeedbackForm.jsx     # client form: stars + comment + honeypot
+│  │  └─ FeedbackForm.jsx     # client form: yes/no + comment + honeypot
 │  └─ api/feedback/route.js   # POST → validate → Sheets upsert
 ├─ lib/
 │  └─ sheets.js               # service-account client + upsert

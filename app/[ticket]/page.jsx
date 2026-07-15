@@ -2,10 +2,10 @@ import FeedbackForm from './FeedbackForm';
 
 const TICKET_RE = /^[A-Za-z0-9\-]{3,40}$/;
 
-function clampRating(value) {
-  const n = Number(value);
-  if (Number.isInteger(n) && n >= 1 && n <= 5) return n;
-  return 0;
+function normalizeRating(value) {
+  if (typeof value !== 'string') return '';
+  const v = value.trim().toLowerCase();
+  return v === 'yes' || v === 'no' ? v : '';
 }
 
 // Server shell: validate the ticket, read the rating (?r=) and customer (?c=)
@@ -26,7 +26,7 @@ export default async function TicketPage({ params, searchParams }) {
     );
   }
 
-  const initialRating = clampRating(sp.r);
+  const initialRating = normalizeRating(sp.r);
   const customer = typeof sp.c === 'string' ? sp.c : '';
 
   return (

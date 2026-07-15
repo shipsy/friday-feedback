@@ -2,19 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-const STARS = [1, 2, 3, 4, 5];
-const LABELS = {
-  1: '1 star — Very dissatisfied',
-  2: '2 stars — Dissatisfied',
-  3: '3 stars — Neutral',
-  4: '4 stars — Satisfied',
-  5: '5 stars — Very satisfied',
-};
+const OPTIONS = [
+  { value: 'yes', label: 'Yes', aria: 'Yes — the response was helpful' },
+  { value: 'no', label: 'No', aria: 'No — the response was not helpful' },
+];
 
 function errorMessage(code) {
   switch (code) {
     case 'invalid_rating':
-      return 'Please select a rating from 1 to 5 stars.';
+      return 'Please choose Yes or No.';
     case 'invalid_ticket':
       return 'This link is invalid.';
     case 'server_error':
@@ -25,17 +21,14 @@ function errorMessage(code) {
 }
 
 export default function FeedbackForm({ ticket, initialRating, customer }) {
-  const [rating, setRating] = useState(initialRating || 0);
-  const [hover, setHover] = useState(0);
+  const [rating, setRating] = useState(initialRating || ''); // '' | 'yes' | 'no'
   const [comment, setComment] = useState('');
   const [website, setWebsite] = useState(''); // honeypot — must stay empty
   const [status, setStatus] = useState('idle'); // idle | submitting | success | error
   const [error, setError] = useState('');
   const [announce, setAnnounce] = useState(''); // persistent live-region text
-  const starRefs = useRef([]);
+  const optionRefs = useRef([]);
   const successHeadingRef = useRef(null);
-
-  const shown = hover || rating;
 
   // On success, announce via the persistent live region and move focus to the
   // confirmation heading so keyboard/AT users are placed on it (a live region
@@ -47,39 +40,35 @@ export default function FeedbackForm({ ticket, initialRating, customer }) {
     }
   }, [status, ticket]);
 
-  function focusStar(value) {
-    const el = starRefs.current[value - 1];
+  function selectByIndex(index) {
+    const clamped = (index + OPTIONS.length) % OPTIONS.length;
+    const opt = OPTIONS[clamped];
+    setRating(opt.value);
+    const el = optionRefs.current[clamped];
     if (el) el.focus();
   }
 
   // ARIA radiogroup keyboard behavior: arrows move + select, Home/End jump.
   function onKeyDown(e) {
+    const current = OPTIONS.findIndex((o) => o.value === rating);
     switch (e.key) {
       case 'ArrowRight':
-      case 'ArrowUp': {
+      case 'ArrowDown':
         e.preventDefault();
-        const next = Math.min(5, (rating || 0) + 1);
-        setRating(next);
-        focusStar(next);
+        selectByIndex(current < 0 ? 0 : current + 1);
         break;
-      }
       case 'ArrowLeft':
-      case 'ArrowDown': {
+      case 'ArrowUp':
         e.preventDefault();
-        const next = Math.max(1, (rating || 1) - 1);
-        setRating(next);
-        focusStar(next);
+        selectByIndex(current < 0 ? 0 : current - 1);
         break;
-      }
       case 'Home':
         e.preventDefault();
-        setRating(1);
-        focusStar(1);
+        selectByIndex(0);
         break;
       case 'End':
         e.preventDefault();
-        setRating(5);
-        focusStar(5);
+        selectByIndex(OPTIONS.length - 1);
         break;
       default:
         break;
@@ -89,8 +78,8 @@ export default function FeedbackForm({ ticket, initialRating, customer }) {
   async function onSubmit(e) {
     e.preventDefault();
     setError('');
-    if (!(rating >= 1 && rating <= 5)) {
-      setError('Please select a rating from 1 to 5 stars.');
+    if (rating !== 'yes' && rating !== 'no') {
+      setError('Please choose Yes or No.');
       setStatus('error');
       return;
     }
@@ -140,38 +129,33 @@ export default function FeedbackForm({ ticket, initialRating, customer }) {
           <form onSubmit={onSubmit} noValidate>
             <div className="field">
               <span id="rating-label" className="label">
-                Your rating
+                Was the response helpful?
               </span>
               <div
-                className="stars"
+                className="choices"
                 role="radiogroup"
                 aria-labelledby="rating-label"
                 aria-required="true"
-                onMouseLeave={() => setHover(0)}
               >
-                {STARS.map((value) => {
-                  const active = value <= shown;
-                  const isChecked = value === rating;
-                  const isFocusable = isChecked || (!rating && value === 1);
+                {OPTIONS.map((opt, index) => {
+                  const isChecked = opt.value === rating;
+                  const isFocusable = isChecked || (!rating && index === 0);
                   return (
                     <button
-                      key={value}
+                      key={opt.value}
                       type="button"
                       ref={(el) => {
-                        starRefs.current[value - 1] = el;
+                        optionRefs.current[index] = el;
                       }}
-                      className={`star ${active ? 'star--on' : ''}`}
+                      className={`choice ${isChecked ? 'choice--on' : ''}`}
                       role="radio"
                       aria-checked={isChecked}
-                      aria-label={LABELS[value]}
+                      aria-label={opt.aria}
                       tabIndex={isFocusable ? 0 : -1}
-                      onClick={() => setRating(value)}
-                      onMouseEnter={() => setHover(value)}
-                      onFocus={() => setHover(value)}
-                      onBlur={() => setHover(0)}
+                      onClick={() => setRating(opt.value)}
                       onKeyDown={onKeyDown}
                     >
-                      <span aria-hidden="true">★</span>
+                      {opt.label}
                     </button>
                   );
                 })}
