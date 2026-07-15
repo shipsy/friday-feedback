@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 
 const TICKET_RE = /^[A-Za-z0-9\-]{3,40}$/;
 const MAX_COMMENT = 1000;
+const RATINGS = new Set(['yes', 'no']);
 
 // Strip ASCII control characters (C0 range 0x00–0x1F plus DEL 0x7F).
 // When keepWhitespace is true, tab/newline/carriage-return are preserved so
@@ -55,8 +56,9 @@ export async function POST(request) {
     return bad('invalid_ticket');
   }
 
-  const ratingNum = Number(rating);
-  if (!Number.isInteger(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+  const cleanRating =
+    typeof rating === 'string' ? rating.trim().toLowerCase() : '';
+  if (!RATINGS.has(cleanRating)) {
     return bad('invalid_rating');
   }
 
@@ -66,7 +68,7 @@ export async function POST(request) {
   try {
     await upsertFeedback({
       ticket,
-      rating: ratingNum,
+      rating: cleanRating,
       comment: cleanComment,
       customer: cleanCustomer,
       userAgent: request.headers.get('user-agent') || '',

@@ -5,9 +5,10 @@ Guidance for Claude Code (and humans) working in this repo.
 ## Project
 
 A lightweight Next.js (App Router, JavaScript) web app that collects a customer
-CSAT rating (1–5 stars) + optional comment for a specific support ticket and
-writes it to a Google Sheet. Customers reach it via a per-ticket link embedded
-in the resolution email, e.g. `friday.vercel.app/TKT-93849?r=4`.
+yes/no rating ("was the AI's response helpful?") + optional comment for a
+specific support ticket and writes it to a Google Sheet. Customers reach it via
+a per-ticket link embedded in the resolution email, e.g.
+`friday.vercel.app/TKT-93849?r=yes`.
 
 The authoritative design lives in [`docs/sdd/friday_feedback_hld.md`](docs/sdd/friday_feedback_hld.md).
 
