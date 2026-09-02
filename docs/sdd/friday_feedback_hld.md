@@ -1,6 +1,6 @@
 # Friday Ticket Feedback — High-Level Design (Draft v0.1)
 
-**Status:** Draft for implementation
+**Status:** Implemented — §5, §7, §11 and parts of §14 are superseded by [`friday_feedback_signed_links_hld.md`](friday_feedback_signed_links_hld.md) (signed link IDs)
 **Owner:** Srijan
 **Build agent:** Claude Code
 **Last updated:** 2 Jul 2026
