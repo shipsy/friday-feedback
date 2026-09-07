@@ -17,3 +17,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .vercel
+
+# Generated architecture diagrams — large, regenerate rather than commit
+docs/sdd/*.architecture.html
+docs/sdd/*_architecture.html
+docs/sdd/*.architecture.json
