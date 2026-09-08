@@ -22,3 +22,6 @@ yarn-error.log*
 docs/sdd/*.architecture.html
 docs/sdd/*_architecture.html
 docs/sdd/*.architecture.json
+
+# Local secret handoff notes — never commit
+SECRETS-HANDOFF.local.md

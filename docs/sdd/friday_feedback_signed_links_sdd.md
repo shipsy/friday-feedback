@@ -639,7 +639,7 @@ sequenceDiagram
 
 | Var | Required | Notes |
 |---|---|---|
-| `FEEDBACK_LINK_SECRET` | **yes** | `openssl rand -base64 32`. Used as its literal utf8 string. Same value on the Friday side. |
+| `FEEDBACK_LINK_SECRET` | **yes** | `openssl rand -hex 32`. A distinct value per environment; the same value on the Friday side of that environment. A mismatch is silent — links just read as invalid. |
 | `FEEDBACK_LINK_SECRETS_ACCEPTED` | no | Comma-separated, verify-only (HLD §2.4). |
 | `APP_BASE_URL` | link gen | No trailing slash. |
 | `GOOGLE_SERVICE_ACCOUNT_KEY`, `SHEET_ID`, `SHEET_TAB` | yes | Unchanged. |
