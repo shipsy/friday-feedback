@@ -650,7 +650,7 @@ test runner. Dependency list stays `next`, `react`, `react-dom`, `googleapis`.
 
 | Var | Required | Purpose |
 |---|---|---|
-| `FEEDBACK_LINK_SECRET` | **yes** | HMAC key, `openssl rand -hex 32`. Used as its literal utf8 string, so any charset works — hex is chosen because it survives a .env file, a YAML manifest, AWS Secrets Manager and a shell unmangled. **A distinct value per environment**, and the same value on the Friday side of that environment. A mismatch is silent: links simply read as invalid. |
+| `FEEDBACK_LINK_SECRET` | **yes** | HMAC key, 32 bytes of entropy — `openssl rand -base64 32` or `-hex 32`, whichever you prefer. It is used as a literal utf8 string, so the encoding is cosmetic and environments need not match formats. What matters: **a distinct value per environment**, and the same value on the Friday side of that environment. A mismatch is silent — links simply read as invalid. |
 | `FEEDBACK_LINK_SECRETS_ACCEPTED` | no | Comma-separated old secrets, accepted on verify only (§2.4). |
 | `APP_BASE_URL` | for link gen | e.g. `https://friday.vercel.app`, no trailing slash. Also needed on the Friday side. |
 | `GOOGLE_SERVICE_ACCOUNT_KEY`, `SHEET_ID`, `SHEET_TAB` | yes | Unchanged. |
